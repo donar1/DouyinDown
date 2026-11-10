@@ -129,6 +129,22 @@ class Store:
     def list_authors(self) -> list[dict]:
         return self.query("SELECT * FROM authors ORDER BY last_fetch DESC")
 
+    def delete_author(self, sec_uid: str, drop_works: bool = True) -> dict:
+        """从「已入库 UP 主」里移除该作者。默认连带删掉它的作品台账行。
+
+        注意：只动数据库，不删磁盘上的已下载文件——用户的文件不该被程序悄悄带走。
+        """
+        if not sec_uid:
+            return {"ok": False, "works_removed": 0}
+        with self._lock:
+            works_removed = 0
+            if drop_works:
+                cur = self.conn.execute("DELETE FROM works WHERE sec_uid=?", (sec_uid,))
+                works_removed = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+            self.conn.execute("DELETE FROM authors WHERE sec_uid=?", (sec_uid,))
+            self.conn.commit()
+        return {"ok": True, "works_removed": works_removed}
+
     # ---------- 作品 ----------
     def upsert_works(self, works: list[dict], sec_uid: str = "") -> dict:
         """写入作品台账，返回 {新增, 已有}。已下载的作品不会被重置状态。"""
@@ -169,6 +185,26 @@ class Store:
                          json.dumps(extra, ensure_ascii=False)))
             self.conn.commit()
         return {"added": added, "existing": existing}
+
+    def delete_works(self, aweme_ids: list[str] | None = None, status: str = "",
+                     sec_uid: str = "") -> int:
+        """按 av 号 / 状态 / 作者删除台账行，返回删除条数。只删数据库，不动磁盘文件。"""
+        with self._lock:
+            if aweme_ids:
+                ids = [str(x) for x in aweme_ids if x]
+                if not ids:
+                    return 0
+                marks = ",".join("?" * len(ids))
+                cur = self.conn.execute("DELETE FROM works WHERE aweme_id IN (%s)" % marks, ids)
+            elif status:
+                cur = self.conn.execute("DELETE FROM works WHERE status=?", (status,))
+            elif sec_uid:
+                cur = self.conn.execute("DELETE FROM works WHERE sec_uid=?", (sec_uid,))
+            else:
+                return 0
+            n = cur.rowcount if cur.rowcount and cur.rowcount > 0 else 0
+            self.conn.commit()
+            return n
 
     def set_status(self, aweme_id: str, status: str, saved_path: str = "",
                    size: int = 0, error: str = ""):
