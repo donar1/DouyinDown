@@ -43,9 +43,73 @@ $$(".tab").forEach((t) => t.addEventListener("click", () => {
   $("#panel-" + t.dataset.tab).classList.add("active");
   state.tab = t.dataset.tab;
   if (t.dataset.tab === "records") loadRecords();
+  if (t.dataset.tab === "pending") loadPending();
   if (t.dataset.tab === "reclaim") loadReclaims();
   if (t.dataset.tab === "overview") loadLogs();
 }));
+
+/* ---------- 待下载清单 ---------- */
+state.pendItems = [];
+async function loadPending() {
+  const r = await api("/api/works?status=pending&limit=2000");
+  const items = r.items || [];
+  state.pendItems = items;
+  $("#pendCount").textContent = `共 ${items.length} 条`;
+  const body = $("#pendBody");
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">没有待下载的作品</td></tr>';
+    return;
+  }
+  body.innerHTML = items.map((w) => `
+    <tr>
+      <td><input type="checkbox" class="pchk" value="${w.aweme_id}"></td>
+      <td><img class="cover" loading="lazy" src="${coverUrl(w.cover)}" onerror="this.style.visibility='hidden'"></td>
+      <td><div class="desc1">${w.desc || "（无文案）"}</div><div class="hint">av ${w.aweme_id}</div></td>
+      <td>${w.author_name || "-"}</td>
+      <td>${w.is_image ? "图集" : fmtDur(w.duration_ms)}</td>
+      <td><div class="row" style="gap:6px">
+        <button class="btn mini" data-pdl="${w.aweme_id}">下载</button>
+        <button class="btn mini danger" data-pdel="${w.aweme_id}">删除</button>
+      </div></td>
+    </tr>`).join("");
+
+  $$("[data-pdl]").forEach((b) => b.addEventListener("click", async () => {
+    const r2 = await api("/api/download", { body: { aweme_ids: [b.dataset.pdl] } });
+    toast(r2.queued ? "已入队下载" : "队列未启动");
+    poll();
+  }));
+  $$("[data-pdel]").forEach((b) => b.addEventListener("click", async () => {
+    const r2 = await api("/api/works/delete", { body: { aweme_ids: [b.dataset.pdel] } });
+    toast(`已删除 ${r2.removed || 0} 条台账记录`);
+    loadPending(); poll();
+  }));
+}
+
+$("#chkAllPending") && $("#chkAllPending").addEventListener("change", (e) => {
+  $$(".pchk").forEach((c) => (c.checked = e.target.checked));
+});
+
+$("#btnDelSelPending") && $("#btnDelSelPending").addEventListener("click", async () => {
+  const ids = [...$$(".pchk")].filter((c) => c.checked).map((c) => c.value);
+  if (!ids.length) return toast("先勾选要删除的作品");
+  if (!confirm(`删除选中的 ${ids.length} 条待下载记录？（磁盘上已有的视频不会删）`)) return;
+  const r = await api("/api/works/delete", { body: { aweme_ids: ids } });
+  toast(`已删除 ${r.removed || 0} 条`);
+  loadPending(); poll();
+});
+
+$("#btnClearPending") && $("#btnClearPending").addEventListener("click", async () => {
+  if (!confirm("清空整个待下载清单？（只清台账，不删磁盘文件）")) return;
+  const r = await api("/api/works/delete", { body: { status: "pending" } });
+  toast(`已清空 ${r.removed || 0} 条待下载记录`);
+  loadPending(); poll();
+});
+
+$("#btnDlAllPending") && $("#btnDlAllPending").addEventListener("click", async () => {
+  const r = await api("/api/download", { body: {} });
+  toast(r.queued ? `已把 ${r.queued} 条待下载全部入队` : "没有待下载的作品");
+  poll();
+});
 
 /* ---------- 状态轮询 ---------- */
 async function poll() {
@@ -130,10 +194,27 @@ async function loadAuthors() {
   $("#authors").innerHTML = items.map((a) => `
     <div class="author ${a.sec_uid === state.secUid ? "active" : ""}" data-sec="${a.sec_uid}"
          data-nick="${(a.nickname || "").replace(/"/g, "&quot;")}">
-      <div class="n"><span>${a.nickname || a.sec_uid.slice(-8)}</span>
-        <span class="hint">${a.total_posts || 0} 条</span></div>
+      <div class="n">
+        <span>${a.nickname || a.sec_uid.slice(-8)}</span>
+        <span class="nright">
+          <span class="hint">${a.total_posts || 0} 条</span>
+          <button class="del" data-del="${a.sec_uid}" data-delname="${(a.nickname || "").replace(/"/g, "&quot;")}"
+                  title="从列表移除该作者">×</button>
+        </span>
+      </div>
       <div class="m">${a.unique_id ? "抖音号 " + a.unique_id : ""} ${a.last_fetch ? "· " + new Date(a.last_fetch * 1000).toLocaleString() : ""}</div>
     </div>`).join("");
+  $$("#authors .del").forEach((btn) => btn.addEventListener("click", async (ev) => {
+    ev.stopPropagation();
+    const sec = btn.dataset.del, name = btn.dataset.delname || "该作者";
+    if (!confirm(`把「${name}」从列表移除？\n\n该 UP 主的作品台账会一起清掉，已下载的视频文件不会删除。`)) return;
+    const r = await api("/api/authors/delete", { body: { sec_uid: sec } });
+    if (r.ok) {
+      toast(`已移除「${name}」，清理台账 ${r.works_removed || 0} 条`);
+      if (state.secUid === sec) { state.secUid = ""; state.works = []; state.selected.clear(); renderWorks(); }
+      loadAuthors();
+    } else toast("移除失败");
+  }));
   $$(".author").forEach((el) => el.addEventListener("click", () => {
     state.secUid = el.dataset.sec; state.nickname = el.dataset.nick;
     $$(".author").forEach((x) => x.classList.remove("active"));
@@ -274,6 +355,11 @@ async function loadLogs() {
 $("#btnLogRefresh").addEventListener("click", loadLogs);
 $("#btnStopDl").addEventListener("click", async () => {
   await api("/api/download/stop", { body: {} }); toast("已停止下载"); poll();
+});
+$("#btnConvertImgs") && $("#btnConvertImgs").addEventListener("click", async () => {
+  toast("正在转换已下载的图片…");
+  const r = await api("/api/images/convert", { body: {} });
+  toast(`转换完成：成功 ${r.converted || 0}，跳过 ${r.skipped || 0}，失败 ${r.failed || 0}`);
 });
 $("#btnSaveSet").addEventListener("click", async () => {
   const r = await api("/api/settings", { body: { download_root: $("#dlRoot").value.trim(), concurrency: $("#conc").value } });
