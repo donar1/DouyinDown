@@ -261,7 +261,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"items": APP.store.list_reclaims(st)})
 
             if p == "/api/cover":
-                url = unquote(q.get("url", [""])[0])
+                # parse_qs 已经解码过一次，这里不能再 unquote，
+                # 否则 URL 里的签名参数会被二次解码破坏，抖音返回 404。
+                url = q.get("url", [""])[0]
                 if not url:
                     return self._send(404, b"no url", "text/plain")
                 try:
