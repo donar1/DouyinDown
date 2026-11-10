@@ -311,6 +311,13 @@ class Handler(BaseHTTPRequestHandler):
                 r = APP.downloader.verify_and_reclaim(body.get("sec_uid", ""))
                 return self._json(r)
 
+            if p == "/api/images/convert":
+                # 把已经下好的 webp/png 就地转成 jpeg（新下载的会在落盘时自动转）
+                from .downloader import convert_existing_images
+                root = body.get("dir") or APP.store.get_setting("download_root", str(APP.download_root))
+                r = convert_existing_images(root, APP.log)
+                return self._json(r)
+
             if p == "/api/reclaims/clear":
                 ids = body.get("ids")
                 APP.store.clear_reclaims(ids)
@@ -340,11 +347,22 @@ class Handler(BaseHTTPRequestHandler):
                     APP.store.set_setting("concurrency", str(c))
                 return self._json(APP.settings_to_dict())
 
-            if p == "/api/works/delete":  # 清空某作者台账（不删文件）
-                sec = body.get("sec_uid", "")
-                if sec:
-                    APP.store.execute("DELETE FROM works WHERE sec_uid=?", (sec,))
-                return self._json({"ok": True})
+            if p == "/api/authors/delete":
+                sec = (body.get("sec_uid") or "").strip()
+                if not sec:
+                    return self._json({"error": "缺少 sec_uid"}, 400)
+                r = APP.store.delete_author(sec, drop_works=bool(body.get("drop_works", True)))
+                APP.log("已移除 UP 主 %s（清理作品台账 %d 条）" % (sec[-10:], r.get("works_removed", 0)))
+                return self._json(r)
+
+            if p == "/api/works/delete":  # 删台账行，不删磁盘文件
+                ids = body.get("aweme_ids") or []
+                sec = (body.get("sec_uid") or "").strip()
+                st = (body.get("status") or "").strip()
+                n = APP.store.delete_works(aweme_ids=ids, status=st, sec_uid=sec)
+                if n:
+                    APP.log("已从台账删除 %d 条作品（磁盘文件保留）" % n)
+                return self._json({"ok": True, "removed": n})
 
             return self._send(404, b"not found", "text/plain")
         except Exception:
