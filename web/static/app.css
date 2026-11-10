@@ -1,0 +1,103 @@
+:root{
+  --bg:#f2f4f7; --panel:#fff; --line:#dfe3e8; --text:#1f2328; --muted:#656d76;
+  --accent:#2f6fed; --accent-soft:#e8f0fe; --ok:#1a7f37; --warn:#bf8700; --err:#cf222e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 "Microsoft YaHei","Segoe UI",system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px 48px}
+header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.hd{max-width:1280px;margin:0 auto;padding:14px 16px 0}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.logo{width:30px;height:30px;border-radius:8px;background:#111;color:#fff;display:flex;
+  align-items:center;justify-content:center;font-weight:700;font-size:12px;letter-spacing:.5px}
+.brand h1{font-size:17px;margin:0;font-weight:600}
+.brand .sub{color:var(--muted);font-size:12px}
+.userbox{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tabs{display:flex;gap:2px}
+.tab{padding:9px 18px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;
+  cursor:pointer;color:var(--muted);background:transparent;user-select:none}
+.tab:hover{background:#eceff3}
+.tab.active{background:var(--panel);border-color:var(--line);color:var(--accent);font-weight:600}
+main{padding-top:18px}
+.panel{display:none}
+.panel.active{display:block}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card.no-pad{padding:0;overflow:hidden}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between;align-items:flex-start}
+.right{margin-left:auto}
+.mt10{margin-top:10px}
+.mt14{margin-top:14px}
+input[type=text],input[type=number],select{padding:8px 11px;border:1px solid var(--line);
+  border-radius:8px;font-size:14px;font-family:inherit;background:#fff;outline:none;color:inherit}
+input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input::placeholder{color:#9aa4b0}
+.grow{flex:1;min-width:280px}
+.narrow{width:110px}
+.narrow2{width:190px}
+.sel{padding:7px 10px}
+.btn{padding:8px 15px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;
+  font-size:14px;font-family:inherit;color:var(--text);white-space:nowrap}
+.btn:hover{background:#f3f5f8}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--err);border-color:#ffd7d5}
+.btn.danger:hover{background:#fff0ef}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat .k{color:var(--muted);font-size:12px}
+.stat .v{font-size:24px;font-weight:600;margin-top:2px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.dot.on{background:var(--ok)} .dot.off{background:#c4c9d0}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;border:1px solid var(--line)}
+.pill.done{background:#e6f4ea;border-color:#c3e8cd;color:var(--ok)}
+.pill.failed{background:#fff0ef;border-color:#ffd7d5;color:var(--err)}
+.pill.pending{background:#fff8e6;border-color:#f3e2b2;color:var(--warn)}
+.pill.downloading{background:#e8f0fe;border-color:#cddcfb;color:var(--accent)}
+.pill.missing{background:#f6f8fa;color:var(--muted)}
+
+/* 作者卡 */
+.authors{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:12px}
+.author{border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer;background:#fff}
+.author:hover{border-color:var(--accent);background:var(--accent-soft)}
+.author.active{border-color:var(--accent);background:var(--accent-soft)}
+.author .n{font-weight:600;margin-bottom:2px;display:flex;justify-content:space-between}
+.author .m{font-size:12px;color:var(--muted)}
+
+/* 作品网格：直接看封面 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px;margin-top:14px}
+.work{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  display:flex;flex-direction:column}
+.work:hover{box-shadow:0 4px 16px rgba(31,35,40,.09)}
+.thumb{position:relative;width:100%;aspect-ratio:3/4;background:#eef0f3;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .badge{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.72);color:#fff;
+  font-size:11px;padding:1px 6px;border-radius:4px}
+.thumb .chk{position:absolute;left:8px;top:8px;width:19px;height:19px;cursor:pointer}
+.thumb .st{position:absolute;left:6px;bottom:6px;font-size:11px;padding:1px 7px;border-radius:999px;
+  background:rgba(255,255,255,.92);color:#333}
+.work .body{padding:9px 10px;display:flex;flex-direction:column;gap:6px;flex:1}
+.work .desc{font-size:13px;line-height:1.45;max-height:4.2em;overflow:hidden}
+.work .meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;
+  color:var(--muted);margin-top:auto}
+.work .mini{font-size:12px;padding:3px 9px}
+
+/* 表格 */
+.tablewrap{max-height:calc(100vh - 300px);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--muted);font-weight:500;background:#fafbfc;position:sticky;top:0;z-index:5}
+td .cover{width:42px;height:56px;object-fit:cover;border-radius:5px;background:#eef0f3;display:block}
+.desc1{max-height:3em;overflow:hidden;line-height:1.45}
+.empty{text-align:center;color:var(--muted);padding:56px 0}
+.hint{color:var(--muted);font-size:12px}
+.log{background:#0f1419;color:#c9d1d9;border-radius:8px;padding:12px;height:300px;overflow:auto;
+  font:12px/1.6 Consolas,Monaco,monospace;white-space:pre-wrap;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f2328;color:#fff;
+  padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+.toast.show{opacity:.95}
