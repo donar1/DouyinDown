@@ -51,6 +51,75 @@ def build_filename(work: dict, ext: str = ".mp4") -> str:
     return "%s_%s_%s%s" % (d, desc, work.get("aweme_id"), ext)
 
 
+def to_jpeg(src: Path, dst: Path) -> Path:
+    """把下载到的图片统一转成真正的 JPEG。
+
+    抖音图集给的地址多是 `.webp`，很多看图软件 / 相册 / 剪辑软件不认。
+    已经有 Pillow 就转，没有就原样保留——宁可格式不对，也不能把文件弄丢。
+    """
+    try:
+        head = src.open("rb").read(3)
+    except Exception:
+        return src
+    if head[:2] == b"\xff\xd8":  # 本身就是 JPEG
+        if src.suffix.lower() in (".jpg", ".jpeg") and src != dst:
+            src.replace(dst)
+            return dst
+        return src
+    try:
+        from PIL import Image
+    except Exception:
+        return src
+    try:
+        with Image.open(src) as im:
+            im.load()
+            if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+                bg = Image.new("RGB", im.size, (255, 255, 255))
+                rgba = im.convert("RGBA")
+                bg.paste(rgba, mask=rgba.split()[-1])
+                out = bg
+            else:
+                out = im.convert("RGB")
+            out.save(dst, "JPEG", quality=92, optimize=True, progressive=True)
+        if src.exists() and src.resolve() != dst.resolve():
+            src.unlink()
+        return dst
+    except Exception:
+        if dst.exists() and (not src.exists() or src.resolve() != dst.resolve()):
+            try:
+                dst.unlink()
+            except Exception:
+                pass
+        return src
+
+
+def convert_existing_images(root: str | Path, log: Callable[[str], None] | None = None) -> dict:
+    """把已经下好但仍是 webp/png 的图片就地转成 jpeg，返回统计。"""
+    log = log or (lambda s: None)
+    root = Path(root)
+    stats = {"converted": 0, "skipped": 0, "failed": 0}
+    if not root.exists():
+        return stats
+    for p in root.rglob("*"):
+        if not p.is_file() or p.suffix.lower() not in (".webp", ".png", ".heic", ".gif"):
+            continue
+        try:
+            dst = p.with_suffix(".jpg")
+            if dst.exists():
+                stats["skipped"] += 1
+                continue
+            out = to_jpeg(p, dst)
+            if out == dst:
+                stats["converted"] += 1
+            else:
+                stats["failed"] += 1
+        except Exception as e:
+            stats["failed"] += 1
+            log("转换失败 %s: %s" % (p.name, e))
+    log("图片转 JPEG：成功 %d，跳过 %d，失败 %d" % (stats["converted"], stats["skipped"], stats["failed"]))
+    return stats
+
+
 class Downloader:
     """一个下载器实例管理一个队列 + 若干 worker 线程。"""
 
@@ -147,9 +216,12 @@ class Downloader:
                 sub.mkdir(parents=True, exist_ok=True)
                 total = 0
                 for i, u in enumerate(urls, 1):
-                    ext = os.path.splitext(u.split("?")[0])[1] or ".jpg"
-                    p = sub / ("%03d%s" % (i, ext))
-                    total += self._fetch(u, p, referer="https://www.douyin.com/")
+                    tmp = sub / ("%03d.src" % i)
+                    self._fetch(u, tmp, referer="https://www.douyin.com/")
+                    tail = u.split("?")[0].rsplit(".", 1)[-1].lower()
+                    tmp = tmp.rename(tmp.with_suffix("." + tail)) if tail in ("webp", "jpeg", "jpg", "png", "heic", "gif") else tmp
+                    final = to_jpeg(tmp, sub / ("%03d.jpg" % i))
+                    total += final.stat().st_size if final.exists() else 0
                 self.store.set_status(aweme_id, "done", saved_path=str(sub), size=total)
             else:
                 url = w.get("play_url") or ""
