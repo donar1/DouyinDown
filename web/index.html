@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DouyinDown - 抖音 UP 主批量下载</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <div class="hd">
+    <div class="brand">
+      <div class="logo">DY</div>
+      <div>
+        <h1>DouyinDown</h1>
+        <div class="sub">一键下载抖音 UP 主全部作品 · 按 UP 主分文件夹 · 断点续传</div>
+      </div>
+      <div class="userbox">
+        <span class="hint" id="loginPill"><span class="dot off"></span>未登录</span>
+        <button class="btn" id="btnLogin">登录抖音</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="up">UP主批量</div>
+      <div class="tab" data-tab="records">下载记录</div>
+      <div class="tab" data-tab="reclaim">补采清单</div>
+      <div class="tab" data-tab="overview">运行状态</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="panel active" id="panel-up">
+    <div class="card">
+      <div class="row">
+        <input type="text" id="target" class="grow"
+               placeholder="粘贴抖音主页链接，如 https://www.douyin.com/user/MS4wLjABAAAA... （也支持 v.douyin.com 短链 / sec_uid）">
+        <input type="number" id="maxItems" class="narrow" placeholder="条数上限" title="不填 = 全部">
+        <button class="btn primary" id="btnFetch">一键拉取全部作品</button>
+      </div>
+      <div class="row mt10">
+        <span class="hint" id="fetchStatus">就绪</span>
+        <div class="right row">
+          <button class="btn" id="btnClearUp">清空</button>
+          <button class="btn primary" id="btnDownloadAll">下载该作者全部待下载</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <b>已入库的 UP 主</b>
+          <span class="hint" id="authorCount"></span>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnVerify">比对缺失</button>
+        </div>
+      </div>
+      <div id="authors" class="authors"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <b>该作者的作品</b>
+          <input type="text" id="kw" class="narrow2" placeholder="搜文案 / av号">
+          <select id="statusSel" class="sel">
+            <option value="">全部状态</option>
+            <option value="pending">待下载</option>
+            <option value="done">已完成</option>
+            <option value="failed">失败</option>
+            <option value="missing">缺失</option>
+          </select>
+          <label class="hint"><input type="checkbox" id="chkAll"> 全选</label>
+        </div>
+        <div class="row">
+          <span class="hint" id="workCount"></span>
+          <button class="btn primary" id="btnQueueSel">选中项入队下载</button>
+        </div>
+      </div>
+      <div id="works" class="grid"></div>
+      <div id="worksEmpty" class="empty">还没有数据。在上面粘贴一个抖音主页链接，点「一键拉取全部作品」。</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-records">
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <b>下载记录</b>
+          <input type="text" id="kw2" class="narrow2" placeholder="搜文案 / av号">
+          <select id="statusSel2" class="sel">
+            <option value="done">已完成</option>
+            <option value="">全部状态</option>
+            <option value="pending">待下载</option>
+            <option value="failed">失败</option>
+          </select>
+        </div>
+        <div class="row">
+          <span class="hint" id="recCount"></span>
+          <button class="btn" id="btnRefreshRec">刷新</button>
+        </div>
+      </div>
+    </div>
+    <div class="card no-pad">
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th style="width:64px">封面</th><th>文案</th><th style="width:120px">UP 主</th>
+                <th style="width:104px">时长</th><th style="width:86px">状态</th><th style="width:120px">大小</th></tr>
+          </thead>
+          <tbody id="recBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-reclaim">
+    <div class="card">
+      <div class="row between">
+        <div>
+          <b>补采清单</b>
+          <div class="hint">每次下载完成后自动与推送清单比对，缺失的作品会落到这里，方便二次推送。</div>
+        </div>
+        <div class="row">
+          <span class="hint" id="rec2Count"></span>
+          <button class="btn danger" id="btnClearReclaim">清空列表</button>
+          <button class="btn primary" id="btnPushReclaim">一键重新推送</button>
+        </div>
+      </div>
+    </div>
+    <div class="card no-pad">
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th style="width:64px">封面</th><th>文案</th><th style="width:120px">UP 主</th>
+                <th style="width:150px">缺失原因</th><th style="width:86px">状态</th><th style="width:96px">操作</th></tr>
+          </thead>
+          <tbody id="rec2Body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-overview">
+    <div class="stats" id="stats"></div>
+    <div class="card mt14">
+      <div class="row between">
+        <b>运行日志</b>
+        <div class="row">
+          <button class="btn" id="btnStopDl">停止下载</button>
+          <button class="btn" id="btnLogRefresh">刷新</button>
+        </div>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <b>下载目录</b>
+        <input type="text" id="dlRoot" class="grow">
+        <b>并发</b>
+        <input type="number" id="conc" class="narrow">
+        <button class="btn" id="btnSaveSet">保存</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
