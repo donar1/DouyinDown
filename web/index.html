@@ -21,6 +21,7 @@
     </div>
     <div class="tabs">
       <div class="tab active" data-tab="up">UP主批量</div>
+      <div class="tab" data-tab="pending">待下载</div>
       <div class="tab" data-tab="records">下载记录</div>
       <div class="tab" data-tab="reclaim">补采清单</div>
       <div class="tab" data-tab="overview">运行状态</div>
@@ -81,6 +82,36 @@
       </div>
       <div id="works" class="grid"></div>
       <div id="worksEmpty" class="empty">还没有数据。在上面粘贴一个抖音主页链接，点「一键拉取全部作品」。</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-pending">
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <b>待下载清单</b>
+          <span class="hint" id="pendCount"></span>
+        </div>
+        <div class="row">
+          <label class="hint"><input type="checkbox" id="chkAllPending"> 全选</label>
+          <button class="btn danger" id="btnDelSelPending">删除选中</button>
+          <button class="btn danger" id="btnClearPending">清空待下载</button>
+          <button class="btn primary" id="btnDlAllPending">全部开始下载</button>
+        </div>
+      </div>
+      <div class="hint mt10">这里只列 status = 待下载 的作品。删除只清台账，已经落在磁盘上的视频文件不会被删。</div>
+    </div>
+    <div class="card no-pad">
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th style="width:34px"></th><th style="width:64px">封面</th><th>文案</th>
+                <th style="width:130px">UP 主</th><th style="width:76px">时长</th>
+                <th style="width:120px">操作</th></tr>
+          </thead>
+          <tbody id="pendBody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -149,6 +180,7 @@
       <div class="row between">
         <b>运行日志</b>
         <div class="row">
+          <button class="btn" id="btnConvertImgs" title="把已下好的 webp 图片转成 jpeg">图片转 JPEG</button>
           <button class="btn" id="btnStopDl">停止下载</button>
           <button class="btn" id="btnLogRefresh">刷新</button>
         </div>
