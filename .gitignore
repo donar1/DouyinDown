@@ -1,0 +1,16 @@
+# 运行时与产物，不入库
+build/
+dist/
+data/
+download/
+runtime/
+__pycache__/
+*.pyc
+*.part
+*.db
+*.zip
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
